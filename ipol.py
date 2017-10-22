@@ -53,9 +53,9 @@ primitives = (
 )
 
 
-def tokenize(program):
+def tokenize(line):
     """Pass 1.1 Lexer spits out tokens"""
-    tokens = re.split('\s+', program)
+    tokens = re.split('\s+', line)
 
     # Go through every primitive and find a match to already known keywords
     for primitive in primitives:
@@ -76,9 +76,14 @@ def tokenize(program):
 def detect_token(text):
     if isinstance(text, Token):
         return text
-    if re.fullmatch('[0-9]*', text):
+    elif re.fullmatch('[0-9]*', text):
         return Token('integer', text)
-    elif re.fullmatch('[a-zA-Z_][a-zA-Z0-9_]*', text):
+    elif text.startswith('['):
+        return Token('string_start', text)
+    elif text.endswith(']'):
+        return Token('string_end', text)
+    # \[([^\]]+)]
+    elif re.fullmatch('[a-zA-Z_!][a-zA-Z0-9_!]*', text):
         return Token('identifier', text)
     else:
         print text
@@ -89,6 +94,6 @@ if __name__ == '__main__':
     _, filename = sys.argv
     file_content = None
     with open(filename, 'r') as f:
-        file_content = f.read()
-    tokens = tokenize(file_content)
-    print tokens
+        lines = f.readlines()
+    for line in lines:
+        print tokenize(line)
