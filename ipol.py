@@ -45,8 +45,8 @@ primitives = (
     Token('distance', 'DIST'),
 
     Token('input', 'GIVEME?'),
-    Token('print', 'GIVEYOU!'),
     Token('printwnl', 'GIVEYOU!!'),
+    Token('print', 'GIVEYOU!'),
     Token('store_start', 'STORE'),
     Token('store_in', 'IN'),
     Token('declare_with', 'WITH'),
@@ -70,7 +70,38 @@ def tokenize(line):
                     parts.append(primitive)
                 parts.pop()
         tokens = parts
-    return map(detect_token, parts)
+
+    # Identify identifiers, integer and string literals
+    token_results = []
+    for token in tokens:
+        token_results.append(detect_token(token))
+
+    # Purge string lexeme parts into one string token
+    string_start_index = None
+    string_end_index = None
+    for i, token in enumerate(token_results):
+        if token.name == 'string_start' and string_start_index is None:
+            string_start_index = i
+        elif (token.name == 'string_end' and
+                string_start_index is not None and
+                string_end_index is None):
+            string_end_index = i
+    if string_start_index is not None and string_end_index is not None:
+        string_lexeme = ' '.join([
+            token.lexeme for token in
+            token_results[string_start_index:string_end_index + 1]])
+        token_results = token_results[:string_start_index]\
+            + [Token('string', string_lexeme)]\
+            + token_results[string_end_index + 1:]
+    elif string_start_index is not None and string_end_index is None:
+        # @NOTE: Improve this
+        raise Exception(
+            'While scanning String literal starting from "%s".\n'
+            'Must be an unclosed string.'
+            % token_results[string_start_index].lexeme)
+
+    tokens = token_results
+    return tokens
 
 
 def detect_token(text):
@@ -83,10 +114,9 @@ def detect_token(text):
     elif text.endswith(']'):
         return Token('string_end', text)
     # \[([^\]]+)]
-    elif re.fullmatch('[a-zA-Z_!][a-zA-Z0-9_!]*', text):
+    elif re.fullmatch('[a-zA-Z_][a-zA-Z0-9_\'\"]*', text):
         return Token('identifier', text)
     else:
-        print text
         raise Exception('Invalid token!')
 
 
