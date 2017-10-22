@@ -77,6 +77,7 @@ def tokenize(line):
         token_results.append(detect_token(token))
 
     # Purge string lexeme parts into one string token
+    # Anything enclosed to "[ ]" is a string
     string_start_index = None
     string_end_index = None
     for i, token in enumerate(token_results):
