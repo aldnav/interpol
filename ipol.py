@@ -1,5 +1,6 @@
 import re
 import sys
+from collections import deque
 
 
 def fullmatch(regex, string, flags=0):
@@ -15,41 +16,45 @@ except Exception as e:
 
 
 class Token(object):
-
-    def __init__(self, name, lexeme, *args, **kwargs):
+    def __init__(self, name, lexeme, group, *args, **kwargs):
         # the symbolic name for the token entity
         # (e.g. `if` for the keyword if, `id` for identifier)
         self.name = name
         # the literal text of the token
         self.lexeme = lexeme
 
+        # the group name of token
+        self.group = group
+
     def __repr__(self):
-        return '%s %s' % (self.name, self.lexeme)
+        return '%s %s %s' % (self.name, self.group, self.lexeme)
 
 
 primitives = (
-    Token('begin_program', 'CREATE'),
-    Token('end_program', 'RUPTURE'),
+    Token('begin_program', 'CREATE', 'begin'),
+    Token('end_program', 'RUPTURE', 'end'),
 
-    Token('type_string', 'DSTR'),
-    Token('type_int', 'DINT'),
+    Token('type_string', 'DSTR', 'datatype'),
+    Token('type_int', 'DINT', 'datatype'),
 
-    Token('addition', 'PLUS'),
-    Token('subtraction', 'MINUS'),
-    Token('multiplication', 'TIMES'),
-    Token('division', 'DIVBY'),
-    Token('modulo', 'MODU'),
-    Token('exponentiation', 'RAISE'),
-    Token('nth_root', 'ROOT'),
-    Token('average', 'MEAN'),
-    Token('distance', 'DIST'),
+    Token('addition', 'PLUS', 'operator'),
+    Token('subtraction', 'MINUS', 'operator'),
+    Token('multiplication', 'TIMES', 'operator'),
+    Token('division', 'DIVBY', 'operator'),
+    Token('modulo', 'MODU', 'operator'),
+    Token('exponentiation', 'RAISE', 'operator'),
+    Token('nth_root', 'ROOT', 'operator'),
+    Token('average', 'MEAN', 'mean'),
+    Token('distance', 'DIST', 'dist'),
 
-    Token('input', 'GIVEME?'),
-    Token('printwnl', 'GIVEYOU!!'),
-    Token('print', 'GIVEYOU!'),
-    Token('store_start', 'STORE'),
-    Token('store_in', 'IN'),
-    Token('declare_with', 'WITH'),
+    Token('input', 'GIVEME?', 'io'),
+    Token('printwnl', 'GIVEYOU!!', 'io'),
+    Token('print', 'GIVEYOU!', 'io'),
+    Token('store_start', 'STORE', 'assignment'),
+    Token('store_in', 'IN', 'in_assignment'),
+    Token('declare_with', 'WITH', 'dec_with'),
+    Token('dist_and', 'AND', 'dist_and')
+
 )
 
 
@@ -84,16 +89,16 @@ def tokenize(line):
         if token.name == 'string_start' and string_start_index is None:
             string_start_index = i
         elif (token.name == 'string_end' and
-                string_start_index is not None and
-                string_end_index is None):
+                      string_start_index is not None and
+                      string_end_index is None):
             string_end_index = i
     if string_start_index is not None and string_end_index is not None:
         string_lexeme = ' '.join([
             token.lexeme for token in
             token_results[string_start_index:string_end_index + 1]])
-        token_results = token_results[:string_start_index]\
-            + [Token('string', string_lexeme)]\
-            + token_results[string_end_index + 1:]
+        token_results = token_results[:string_start_index] \
+                        + [Token('string', string_lexeme, 'string')] \
+                        + token_results[string_end_index + 1:]
     elif string_start_index is not None and string_end_index is None:
         # @NOTE: Improve this
         raise Exception(
@@ -105,18 +110,94 @@ def tokenize(line):
     return tokens
 
 
+interpol_dfa = {1: {'identifier':7, 'datatype':2, 'end':3, 'begin':3, 'io':8, 'assignment':10},
+                2: {'identifier':4},
+                3: {},#accepting state
+                4: {'dec_with':5}, #accepting state
+                5: {'exp':6},
+                6: {}, #accepting state
+                7: {'exp':6},
+                8: {'identifier':9, 'exp':9},
+                9: {}, #accepting state
+                10: {'exp':11},
+                11: {'in_assignment':12},
+                12: {'identifier':9},
+                13: {} #dead end state
+                }
+
+class SyntaxChecker(object):
+    def __init__(self, tokens):
+        self.tokens = tokens
+
+    def accept_interpol(self, transitions, accepting_states):
+        state = 1
+        # iterate through tokens produced by lexer
+        while self.tokens:
+            # simulation of dfa for interpol grammar
+            temp_state = transitions[state].get(self.tokens[0].group, None)
+            print 'state %s %s' % (temp_state, self.tokens[0].group),
+            if temp_state is None:
+                # if current state is a state with transition for expression
+                # and the current token is possibly an expression
+                if self.tokens[0].group in ['identifier', 'operator', 'string', 'integer', 'dist',
+                                            'mean'] and state in [5, 10, 7, 8]:
+                    if self.accept_exp():
+                        state = transitions[state].get('exp',None)
+                    else:
+                        return False
+                else:
+                    return False
+            else:
+                state = temp_state
+                self.tokens.remove(self.tokens[0])
+        return state in accepting_states
+
+    #check if tokens form an expression
+    def accept_exp(self):
+        is_accepted = False
+        if self.tokens[0].group in ['identifier', 'string', 'integer']:
+            self.tokens.remove(self.tokens[0])
+            return True
+
+        #for plus, minus, times, divby, modu, raise and nth root operations
+        elif self.tokens[0].group == 'operator':
+            self.tokens.remove(self.tokens[0])
+            if self.accept_exp():
+                if self.accept_exp():
+                    return True
+
+        #for distance operation
+        elif self.tokens[0].group == 'dist':
+            self.tokens.remove(self.tokens[0])
+            if self.accept_exp():
+                if self.accept_exp():
+                    if self.tokens[0].group == 'dist_and':
+                        self.tokens.remove(self.tokens[0])
+                        if self.accept_exp():
+                            if self.accept_exp():
+                                return True
+
+        # for mean operation
+        elif self.tokens[0].group == 'mean':
+            self.tokens.remove(self.tokens[0])
+            while self.accept_exp() and self.tokens:
+                is_accepted = True
+
+        return is_accepted
+
+
 def detect_token(text):
     if isinstance(text, Token):
         return text
     elif re.fullmatch('[0-9]*', text):
-        return Token('integer', text)
+        return Token('integer', text, 'integer')
     elif text.startswith('['):
-        return Token('string_start', text)
+        return Token('string_start', text, 'string_start')
     elif text.endswith(']'):
-        return Token('string_end', text)
+        return Token('string_end', text, 'string_end')
     # \[([^\]]+)]
     elif re.fullmatch('[a-zA-Z_][a-zA-Z0-9_\'\"]*', text):
-        return Token('identifier', text)
+        return Token('identifier', text, 'identifier')
     else:
         raise Exception('Invalid token!')
 
@@ -127,4 +208,8 @@ if __name__ == '__main__':
     with open(filename, 'r') as f:
         lines = f.readlines()
     for line in lines:
-        print tokenize(line)
+        # print tokenize(line)
+        tokens = tokenize(line)
+        syntax_checker = SyntaxChecker(tokens)
+        print tokens
+        print syntax_checker.accept_interpol(interpol_dfa, [3, 4, 6, 9])
