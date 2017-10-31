@@ -22,7 +22,6 @@ class Token(object):
         self.name = name
         # the literal text of the token
         self.lexeme = lexeme
-
         # the group name of token
         self.group = group
 
@@ -89,8 +88,8 @@ def tokenize(line):
         if token.name == 'string_start' and string_start_index is None:
             string_start_index = i
         elif (token.name == 'string_end' and
-                      string_start_index is not None and
-                      string_end_index is None):
+              string_start_index is not None and
+              string_end_index is None):
             string_end_index = i
     if string_start_index is not None and string_end_index is not None:
         string_lexeme = ' '.join([
@@ -110,20 +109,37 @@ def tokenize(line):
     return tokens
 
 
-interpol_dfa = {1: {'identifier':7, 'datatype':2, 'end':3, 'begin':3, 'io':8, 'assignment':10},
-                2: {'identifier':4},
-                3: {},#accepting state
-                4: {'dec_with':5}, #accepting state
-                5: {'exp':6},
-                6: {}, #accepting state
-                7: {'exp':6},
-                8: {'identifier':9, 'exp':9},
-                9: {}, #accepting state
-                10: {'exp':11},
-                11: {'in_assignment':12},
-                12: {'identifier':9},
-                13: {} #dead end state
-                }
+def detect_token(text):
+    if isinstance(text, Token):
+        return text
+    elif re.fullmatch('[0-9]*', text):
+        return Token('integer', text, 'integer')
+    elif text.startswith('['):
+        return Token('string_start', text, 'string_start')
+    elif text.endswith(']'):
+        return Token('string_end', text, 'string_end')
+    # \[([^\]]+)]
+    elif re.fullmatch('[a-zA-Z_][a-zA-Z0-9_\'\"]*', text):
+        return Token('identifier', text, 'identifier')
+    else:
+        raise Exception('Invalid token!')
+
+
+interpol_dfa = {
+    1: {'identifier': 7, 'datatype': 2, 'end': 3, 'begin': 3, 'io': 8, 'assignment': 10},
+    2: {'identifier': 4},
+    3: {},  #accepting state
+    4: {'dec_with': 5},  #accepting state
+    5: {'exp': 6},
+    6: {},  #accepting state
+    7: {'exp': 6},
+    8: {'identifier': 9, 'exp': 9},
+    9: {},  #accepting state
+    10: {'exp': 11},
+    11: {'in_assignment': 12},
+    12: {'identifier': 9},
+    13: {}  #dead end state
+}
 
 class SyntaxChecker(object):
     def __init__(self, tokens):
@@ -184,22 +200,6 @@ class SyntaxChecker(object):
                 is_accepted = True
 
         return is_accepted
-
-
-def detect_token(text):
-    if isinstance(text, Token):
-        return text
-    elif re.fullmatch('[0-9]*', text):
-        return Token('integer', text, 'integer')
-    elif text.startswith('['):
-        return Token('string_start', text, 'string_start')
-    elif text.endswith(']'):
-        return Token('string_end', text, 'string_end')
-    # \[([^\]]+)]
-    elif re.fullmatch('[a-zA-Z_][a-zA-Z0-9_\'\"]*', text):
-        return Token('identifier', text, 'identifier')
-    else:
-        raise Exception('Invalid token!')
 
 
 if __name__ == '__main__':
