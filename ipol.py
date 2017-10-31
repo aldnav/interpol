@@ -179,7 +179,6 @@ if __name__ == '__main__':
         assert filename.split('.')[-1] == 'ipol'
     except AssertionError as e:
         print 'File not supported. INTERPOL file has the extension `.ipol`'
-        import sys
         sys.exit(1)
     file_content = None
     with open(filename, 'r') as f:
