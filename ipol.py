@@ -1,3 +1,4 @@
+import argparse
 import re
 import sys
 from collections import OrderedDict
@@ -164,7 +165,22 @@ def add_to_symbol_table(tokens):
                 })
 
 if __name__ == '__main__':
-    _, filename = sys.argv
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-f', '--filename',
+        help=('INTERPOL file to execute. (`*.ipol`)\n'
+              'When left empty, interpreter will ask for the file.'))
+    args = parser.parse_args()
+    if args.filename:
+        filename = args.filename
+    else:
+        filename = raw_input('File to execute: ')
+    try:
+        assert filename.split('.')[-1] == 'ipol'
+    except AssertionError as e:
+        print 'File not supported. INTERPOL file has the extension `.ipol`'
+        import sys
+        sys.exit(1)
     file_content = None
     with open(filename, 'r') as f:
         lines = f.readlines()
