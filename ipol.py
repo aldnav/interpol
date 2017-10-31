@@ -1,5 +1,6 @@
 import re
 import sys
+from collections import OrderedDict
 
 
 def fullmatch(regex, string, flags=0):
@@ -24,8 +25,30 @@ class Token(object):
         self.lexeme = lexeme
 
     def __repr__(self):
-        return '%s %s' % (self.name, self.lexeme)
+        return '<%s> %s' % (self.name, self.lexeme)
 
+
+class SymbolTable(object):
+    _table = OrderedDict()
+
+    def insert(self, key, value):
+        self._table[key] = value
+
+    def lookup(self, key):
+        return self._table.get(key, None)
+
+    def __str__(self):
+        display = (
+            'SYMBOL TABLE\n' +
+            '-' * 30 + '\n'
+            'NAME\t\t| TYPE\n' +
+            '-' * 30 + '\n'
+        )
+        for k, v in self._table.items():
+            display += '%s\t\t| %s\n' % (k, v['type'])
+        return display.expandtabs(10)
+
+symbol_table = SymbolTable()
 
 primitives = (
     Token('begin_program', 'CREATE'),
@@ -102,6 +125,7 @@ def tokenize(line):
             % token_results[string_start_index].lexeme)
 
     tokens = token_results
+    add_to_symbol_table(tokens)  # initial pass on adding symbols to table
     return tokens
 
 
@@ -121,10 +145,30 @@ def detect_token(text):
         raise Exception('Invalid token!')
 
 
+def add_to_symbol_table(tokens):
+    """Identify a declaration statement and add a symbol to the symbol table
+        Used in:  `tokenize`
+    """
+    for i, token in enumerate(tokens):
+        next_token = None
+        try:
+            next_token = tokens[i+1]
+        except Exception:
+            continue
+        if (token.name in ['type_int', 'type_string'] and
+                next_token.name == 'identifier'):
+            symbol_table.insert(next_token.lexeme, {
+                    'name': next_token.lexeme,
+                    'type': token.name.replace('type_', ''),
+                    'reference_token': next_token
+                })
+
 if __name__ == '__main__':
     _, filename = sys.argv
     file_content = None
     with open(filename, 'r') as f:
         lines = f.readlines()
-    for line in lines:
+    for i, line in enumerate(lines):
+        print i + 1,
         print tokenize(line)
+    print symbol_table
