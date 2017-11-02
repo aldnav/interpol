@@ -2,7 +2,7 @@ import argparse
 import re
 import sys
 
-from collections import deque, OrderedDict
+from collections import OrderedDict
 
 
 def fullmatch(regex, string, flags=0):
