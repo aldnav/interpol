@@ -56,29 +56,29 @@ symbol_table = SymbolTable()
 
 
 primitives = (
-    Token('begin_program', 'CREATE', 'begin'),
-    Token('end_program', 'RUPTURE', 'end'),
+    Token('begin_program', 'CREATE', 'BEGIN'),
+    Token('end_program', 'RUPTURE', 'END'),
 
-    Token('type_string', 'DSTR', 'datatype'),
-    Token('type_int', 'DINT', 'datatype'),
+    Token('type_string', 'DSTR', '<DATATYPE>'),
+    Token('type_int', 'DINT', '<DATATYPE>'),
 
-    Token('addition', 'PLUS', 'operator'),
-    Token('subtraction', 'MINUS', 'operator'),
-    Token('multiplication', 'TIMES', 'operator'),
-    Token('division', 'DIVBY', 'operator'),
-    Token('modulo', 'MODU', 'operator'),
-    Token('exponentiation', 'RAISE', 'operator'),
-    Token('nth_root', 'ROOT', 'operator'),
-    Token('average', 'MEAN', 'mean'),
-    Token('distance', 'DIST', 'dist'),
+    Token('addition', 'PLUS', '<OPERATOR>'),
+    Token('subtraction', 'MINUS', '<OPERATOR>'),
+    Token('multiplication', 'TIMES', '<OPERATOR>'),
+    Token('division', 'DIVBY', '<OPERATOR>'),
+    Token('modulo', 'MODU', '<OPERATOR>'),
+    Token('exponentiation', 'RAISE', '<OPERATOR>'),
+    Token('nth_root', 'ROOT', '<OPERATOR>'),
+    Token('average', 'MEAN', '<MEAN>'),
+    Token('distance', 'DIST', '<DIST>'),
 
-    Token('input', 'GIVEME?', 'io'),
-    Token('printwnl', 'GIVEYOU!!', 'io'),
-    Token('print', 'GIVEYOU!', 'io'),
-    Token('store_start', 'STORE', 'assignment'),
-    Token('store_in', 'IN', 'in_assignment'),
-    Token('declare_with', 'WITH', 'dec_with'),
-    Token('dist_and', 'AND', 'dist_and')
+    Token('input', 'GIVEME?', '<IO_FUNCTION>'),
+    Token('printwnl', 'GIVEYOU!!', '<IO_FUNCTION>'),
+    Token('print', 'GIVEYOU!', '<IO_FUNCTION>'),
+    Token('store_start', 'STORE', 'STORE'),
+    Token('store_in', 'IN', 'IN'),
+    Token('declare_with', 'WITH', '<WITH>'),
+    Token('dist_and', 'AND', 'AND')
 
 )
 
@@ -122,7 +122,7 @@ def tokenize(line):
             token.lexeme for token in
             token_results[string_start_index:string_end_index + 1]])
         token_results = token_results[:string_start_index] \
-            + [Token('string', string_lexeme, 'string')] \
+            + [Token('string', string_lexeme, '<STRING>')] \
             + token_results[string_end_index + 1:]
     elif string_start_index is not None and string_end_index is None:
         # @NOTE: Improve this
@@ -140,14 +140,14 @@ def detect_token(text):
     if isinstance(text, Token):
         return text
     elif re.fullmatch('[0-9]*', text):
-        return Token('integer', text, 'integer')
+        return Token('integer', text, '<INTEGER>')
     elif text.startswith('['):
         return Token('string_start', text, 'string_start')
     elif text.endswith(']'):
         return Token('string_end', text, 'string_end')
     # \[([^\]]+)]
     elif re.fullmatch('[a-zA-Z_][a-zA-Z0-9_\'\"]*', text):
-        return Token('identifier', text, 'identifier')
+        return Token('identifier', text, '<IDENTIFIER>')
     else:
         raise Exception('Invalid token!')
 
@@ -172,19 +172,18 @@ def add_to_symbol_table(tokens):
 
 
 interpol_dfa = {
-    1: {'identifier': 7, 'datatype': 2, 'end': 3, 'begin': 3, 'io': 8,
-        'assignment': 10},
-    2: {'identifier': 4},
+    1: {'<IDENTIFIER>':7, '<DATATYPE>':2, 'END':3, 'BEGIN':3, '<IO_FUNCTION>':8, 'STORE':10},
+    2: {'<IDENTIFIER>': 4},
     3: {},  # accepting state
-    4: {'dec_with': 5},  # accepting state
-    5: {'exp': 6},
+    4: {'<WITH>': 5},  # accepting state
+    5: {'<EXP>': 6},
     6: {},  # accepting state
-    7: {'exp': 6},
-    8: {'identifier': 9, 'exp': 9},
+    7: {'<EXP>': 6},
+    8: {'<IDENTIFIER>': 9, '<EXP>': 9},
     9: {},  # accepting state
-    10: {'exp': 11},
-    11: {'in_assignment': 12},
-    12: {'identifier': 9},
+    10: {'<EXP>': 11},
+    11: {'IN': 12},
+    12: {'<IDENTIFIER>': 9},
     13: {}  # dead end state
 }
 
@@ -204,15 +203,18 @@ class SyntaxChecker(object):
                 # if current state is a state with transition for expression
                 # and the current token is possibly an expression
                 if (self.tokens[0].group in [
-                        'identifier', 'operator', 'string', 'integer',
-                        'dist', 'mean'] and
+                        '<IDENTIFIER>', '<OPERATOR>', '<STRING>', '<INTEGER>', 
+                        '<DIST>', '<MEAN>'] and
                         state in [5, 10, 7, 8]):
                     if self.accept_exp():
-                        state = transitions[state].get('exp', None)
+                        state = transitions[state].get('<EXP>', None)
                     else:
-                        return False
+                        return 13
                 else:
-                    return False
+                	if state in [5, 10, 7, 8]:
+                        return 13
+                    else:
+                    	return state
             else:
                 state = temp_state
                 self.tokens.remove(self.tokens[0])
@@ -221,30 +223,30 @@ class SyntaxChecker(object):
     # check if tokens form an expression
     def accept_exp(self):
         is_accepted = False
-        if self.tokens[0].group in ['identifier', 'string', 'integer']:
+        if self.tokens[0].group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
             self.tokens.remove(self.tokens[0])
             return True
 
         # for plus, minus, times, divby, modu, raise and nth root operations
-        elif self.tokens[0].group == 'operator':
+        elif self.tokens[0].group == '<OPERATOR>':
             self.tokens.remove(self.tokens[0])
             if self.accept_exp():
                 if self.accept_exp():
                     return True
 
         # for distance operation
-        elif self.tokens[0].group == 'dist':
+        elif self.tokens[0].group == '<DIST>':
             self.tokens.remove(self.tokens[0])
             if self.accept_exp():
                 if self.accept_exp():
-                    if self.tokens[0].group == 'dist_and':
+                    if self.tokens[0].group == 'AND':
                         self.tokens.remove(self.tokens[0])
                         if self.accept_exp():
                             if self.accept_exp():
                                 return True
 
         # for mean operation
-        elif self.tokens[0].group == 'mean':
+        elif self.tokens[0].group == '<MEAN>':
             self.tokens.remove(self.tokens[0])
             while self.accept_exp() and self.tokens:
                 is_accepted = True
