@@ -1,6 +1,8 @@
+import argparse
 import re
 import sys
-from collections import deque
+
+from collections import deque, OrderedDict
 
 
 def fullmatch(regex, string, flags=0):
@@ -26,7 +28,31 @@ class Token(object):
         self.group = group
 
     def __repr__(self):
-        return '%s %s %s' % (self.name, self.group, self.lexeme)
+        return '<%s> %s %s' % (self.lexeme, self.name, self.group)
+
+
+class SymbolTable(object):
+    _table = OrderedDict()
+
+    def insert(self, key, value):
+        self._table[key] = value
+
+    def lookup(self, key):
+        return self._table.get(key, None)
+
+    def __str__(self):
+        display = (
+            'SYMBOL TABLE\n' +
+            '-' * 30 + '\n'
+            'NAME\t\t| TYPE\n' +
+            '-' * 30 + '\n'
+        )
+        for k, v in self._table.items():
+            display += '%s\t\t| %s\n' % (k, v['type'])
+        return display.expandtabs(10)
+
+
+symbol_table = SymbolTable()
 
 
 primitives = (
@@ -96,8 +122,8 @@ def tokenize(line):
             token.lexeme for token in
             token_results[string_start_index:string_end_index + 1]])
         token_results = token_results[:string_start_index] \
-                        + [Token('string', string_lexeme, 'string')] \
-                        + token_results[string_end_index + 1:]
+            + [Token('string', string_lexeme, 'string')] \
+            + token_results[string_end_index + 1:]
     elif string_start_index is not None and string_end_index is None:
         # @NOTE: Improve this
         raise Exception(
@@ -106,6 +132,7 @@ def tokenize(line):
             % token_results[string_start_index].lexeme)
 
     tokens = token_results
+    add_to_symbol_table(tokens)  # initial pass on adding symbols to table
     return tokens
 
 
@@ -125,21 +152,42 @@ def detect_token(text):
         raise Exception('Invalid token!')
 
 
+def add_to_symbol_table(tokens):
+    """Identify a declaration statement and add a symbol to the symbol table
+        Used in:  `tokenize`
+    """
+    for i, token in enumerate(tokens):
+        next_token = None
+        try:
+            next_token = tokens[i + 1]
+        except Exception:
+            continue
+        if (token.name in ['type_int', 'type_string'] and
+                next_token.name == 'identifier'):
+            symbol_table.insert(next_token.lexeme, {
+                'name': next_token.lexeme,
+                'type': token.name.replace('type_', ''),
+                'reference_token': next_token
+            })
+
+
 interpol_dfa = {
-    1: {'identifier': 7, 'datatype': 2, 'end': 3, 'begin': 3, 'io': 8, 'assignment': 10},
+    1: {'identifier': 7, 'datatype': 2, 'end': 3, 'begin': 3, 'io': 8,
+        'assignment': 10},
     2: {'identifier': 4},
-    3: {},  #accepting state
-    4: {'dec_with': 5},  #accepting state
+    3: {},  # accepting state
+    4: {'dec_with': 5},  # accepting state
     5: {'exp': 6},
-    6: {},  #accepting state
+    6: {},  # accepting state
     7: {'exp': 6},
     8: {'identifier': 9, 'exp': 9},
-    9: {},  #accepting state
+    9: {},  # accepting state
     10: {'exp': 11},
     11: {'in_assignment': 12},
     12: {'identifier': 9},
-    13: {}  #dead end state
+    13: {}  # dead end state
 }
+
 
 class SyntaxChecker(object):
     def __init__(self, tokens):
@@ -155,10 +203,12 @@ class SyntaxChecker(object):
             if temp_state is None:
                 # if current state is a state with transition for expression
                 # and the current token is possibly an expression
-                if self.tokens[0].group in ['identifier', 'operator', 'string', 'integer', 'dist',
-                                            'mean'] and state in [5, 10, 7, 8]:
+                if (self.tokens[0].group in [
+                        'identifier', 'operator', 'string', 'integer',
+                        'dist', 'mean'] and
+                        state in [5, 10, 7, 8]):
                     if self.accept_exp():
-                        state = transitions[state].get('exp',None)
+                        state = transitions[state].get('exp', None)
                     else:
                         return False
                 else:
@@ -168,21 +218,21 @@ class SyntaxChecker(object):
                 self.tokens.remove(self.tokens[0])
         return state in accepting_states
 
-    #check if tokens form an expression
+    # check if tokens form an expression
     def accept_exp(self):
         is_accepted = False
         if self.tokens[0].group in ['identifier', 'string', 'integer']:
             self.tokens.remove(self.tokens[0])
             return True
 
-        #for plus, minus, times, divby, modu, raise and nth root operations
+        # for plus, minus, times, divby, modu, raise and nth root operations
         elif self.tokens[0].group == 'operator':
             self.tokens.remove(self.tokens[0])
             if self.accept_exp():
                 if self.accept_exp():
                     return True
 
-        #for distance operation
+        # for distance operation
         elif self.tokens[0].group == 'dist':
             self.tokens.remove(self.tokens[0])
             if self.accept_exp():
@@ -203,13 +253,28 @@ class SyntaxChecker(object):
 
 
 if __name__ == '__main__':
-    _, filename = sys.argv
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-f', '--filename',
+        help=('INTERPOL file to execute. (`*.ipol`)\n'
+              'When left empty, interpreter will ask for the file.'))
+    args = parser.parse_args()
+    if args.filename:
+        filename = args.filename
+    else:
+        filename = raw_input('File to execute: ')
+    try:
+        assert filename.split('.')[-1] == 'ipol'
+    except AssertionError as e:
+        print 'File not supported. INTERPOL file has the extension `.ipol`'
+        sys.exit(1)
     file_content = None
     with open(filename, 'r') as f:
         lines = f.readlines()
-    for line in lines:
-        # print tokenize(line)
+    for i, line in enumerate(lines):
+        print i + 1,
         tokens = tokenize(line)
         syntax_checker = SyntaxChecker(tokens)
         print tokens
         print syntax_checker.accept_interpol(interpol_dfa, [3, 4, 6, 9])
+    print symbol_table
