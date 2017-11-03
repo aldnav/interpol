@@ -189,7 +189,7 @@ def add_to_symbol_table(tokens):
 
 
 interpol_dfa = {
-    1: {'<IDENTIFIER>':7, '<DATATYPE>':2, 'END':3, 'BEGIN':3, '<IO_FUNCTION>':8, 'STORE':10},
+    1: {'<IDENTIFIER>': 7, '<DATATYPE>': 2, 'END': 3, 'BEGIN': 3, '<IO_FUNCTION>': 8, 'STORE': 10},
     2: {'<IDENTIFIER>': 4},
     3: {},  # dead end state
     4: {'<WITH>': 5},  # accepting state
@@ -205,7 +205,7 @@ interpol_dfa = {
     14: {'<END_OF_LINE>': None}  # dead end state
 }
 
-accepting_states =  [4, 6, 9]
+accepting_states = [4, 6, 9]
 
 
 class SyntaxChecker(object):
@@ -216,7 +216,6 @@ class SyntaxChecker(object):
         self.symbol_table = symbol_table
         self.code_began = code_began
         self.code_ended = code_ended
-
 
     def accept_interpol(self, transitions):
         state = 1
@@ -248,13 +247,13 @@ class SyntaxChecker(object):
                         if state in [5, 10, 7, 8]:
                             return 13
                         else:
-                            return state # send to dead end
+                            return state  # send to dead end
                 else:
                     if group_name == '<IO_FUNCTION>':
                         token_node = Node(self.tokens[0], 1)
                         self.parse_tree.add_token(token_node)
                         self.parse_tree.current = token_node
-                    elif group_name in ['<DATATYPE>','STORE']:
+                    elif group_name in ['<DATATYPE>', 'STORE']:
                         token_node = Node(self.tokens[0], 2)
                         self.parse_tree.add_token(token_node)
                         self.parse_tree.current = token_node
@@ -272,8 +271,9 @@ class SyntaxChecker(object):
     def accept_exp(self):
         is_accepted = False
         if self.tokens[0].group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
-            token_node = Node(self.tokens[0],0)
-            if len(self.parse_tree.current.children) == self.parse_tree.current.max_children:
+            token_node = Node(self.tokens[0], 0)
+            if (len(self.parse_tree.current.children) ==
+                    self.parse_tree.current.max_children):
                 self.parse_tree.current = self.parse_tree.current.parent
             self.parse_tree.add_token(token_node)
             self.tokens.remove(self.tokens[0])
@@ -283,7 +283,7 @@ class SyntaxChecker(object):
         elif self.tokens[0].group == '<OPERATOR>':
             token_node = Node(self.tokens[0], 2)
             self.parse_tree.add_token(token_node)
-            self.parse_tree.current = token_node # self.parse_tree.current.children[-1]
+            self.parse_tree.current = token_node  # self.parse_tree.current.children[-1]
             self.tokens.remove(self.tokens[0])
             if self.accept_exp():
                 if self.accept_exp():
@@ -310,7 +310,7 @@ class SyntaxChecker(object):
             self.parse_tree.add_token(token_node)
             self.parse_tree.current = token_node  # self.parse_tree.current.children[-1]
             self.tokens.remove(self.tokens[0])
-            while self.tokens[0].group not in ['<OPERATOR>','<DIST>'] and \
+            while self.tokens[0].group not in ['<OPERATOR>', '<DIST>'] and \
                     self.accept_exp() and \
                     self.tokens:
                 is_accepted = True
@@ -325,22 +325,19 @@ class Node(object):
         self.parent = None
         self.max_children = max_children
 
-
     def add_child(self, node_obj):
         self.children.append(node_obj)
 
 
 class ParseTree(object):
 
-
     def __init__(self):
         self.root = None
         self.current = None
 
-
     def add_token(self, obj):
         if self.root is None:
-            self.root =  obj
+            self.root = obj
             self.current = obj
         else:
             obj.parent = self.current
@@ -356,12 +353,11 @@ class PostfixEvaluator(object):
             if token.group in ['<OPERATOR>']:
                 operand1 = operandStack.pop()
                 operand2 = operandStack.pop()
-                result = self.doBasicArithmetic(operand1, operand2, token.lexeme)
+                result = self.doBasicArithmetic(
+                    operand1, operand2, token.lexeme)
                 operandStack.push(result)
 
         return operandStack.pop()
-
-
 
     def doBasicArithmetic(self, op1, op2, operator):
         if operator == 'PLUS':
@@ -375,7 +371,7 @@ class PostfixEvaluator(object):
         elif operator == 'RAISE':
             return op1 ** op2
         elif operator == 'ROOT':
-            return op1 ** (1/op2)
+            return op1 ** (1 / op2)
 
 
 class Stack(object):
@@ -415,9 +411,8 @@ def walk_tree_df_postorder(node, visit):
         walk_tree_df_postorder(child, visit)
     parse_list.append(visit(node))
 
+
 parse_list = []
-
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -448,7 +443,6 @@ if __name__ == '__main__':
         tokens = tokenize(line)
 
         # conditions for trapping codes outside begin and rupture
-        
         if tokens[0].name == 'begin_program' and not code_began:
             code_began = True
         elif tokens[0].name == 'end_program' and not code_ended:
@@ -458,7 +452,8 @@ if __name__ == '__main__':
             has_error = True
             break
         else:
-            syntax_checker = SyntaxChecker(tokens, symbol_table, code_began, code_ended)
+            syntax_checker = SyntaxChecker(
+                tokens, symbol_table, code_began, code_ended)
             print tokens
             end_state = syntax_checker.accept_interpol(interpol_dfa)
             if end_state in accepting_states:
@@ -478,6 +473,6 @@ if __name__ == '__main__':
                         else:
                             print "%s, " % (token),
                 has_error = True
-                break # end interpretation if error is found
+                break  # end interpretation if error is found
     if not has_error:
         print symbol_table
