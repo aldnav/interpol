@@ -32,12 +32,24 @@ class Token(object):
 
 
 class SymbolTable(object):
+    """Ideally a symbol table would look like:
+    {
+        'x': { 'name': 'x', 'type': 'int', 'value': 5 },
+        'prompt': { 'name': 'prompt', 'type': 'string', 'value': '[Ni hao!]' }
+    }
+    """
     _table = OrderedDict()
 
-    def insert(self, key, value):
-        self._table[key] = value
+    def insert(self, key, meta):
+        """Insert a key with a meta to the symbol table.
+        Arguments:
+            key -- identifier of the symbol
+            meta -- a dict containing information about the symbol
+        """
+        self._table[key] = meta
 
     def lookup(self, key):
+        """Retrieves symbol. Returns None if the key is not present"""
         return self._table.get(key, None)
 
     def __str__(self):
@@ -52,12 +64,14 @@ class SymbolTable(object):
         return display.expandtabs(10)
 
     def set_value(self, key, value):
-        self.lookup(key)['value']= value
+        """Sets the value of the symbol meta."""
+        if self.lookup(key) is not None:
+            self.lookup(key)['value'] = value
+            return value
+        return None
 
 
 symbol_table = SymbolTable()
-
-
 primitives = (
     Token('begin_program', 'CREATE', 'BEGIN'),
     Token('end_program', 'RUPTURE', 'END'),
