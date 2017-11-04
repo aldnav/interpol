@@ -1,6 +1,7 @@
 import argparse
 import re
 import sys
+import math
 
 from collections import OrderedDict
 
@@ -490,11 +491,10 @@ class PostfixEvaluator(object):
             return self.operand_stack.pop()
 
     def get_distance(self, op1, op2, op3, op4):
-        result = 0
 
-        # temporary
-        result = 10
-        return Token('integer', result, '<INTEGER>')
+        dist = math.sqrt((op3 - op1) ** 2 + (op4 - op2) ** 2)
+
+        return Token('integer', dist, '<INTEGER>')
 
 
     def get_mean(self, operands):
