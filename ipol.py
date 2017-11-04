@@ -58,7 +58,7 @@ class SymbolTable(object):
             'NAME\t\t| TYPE \t\t | VALUE\n'
         )
         for k, v in self._table.items():
-            display += '%s\t\t| %s \t | %r\n' % (k, v['type'], v.get('value', None))
+            display += '%s\t\t| %s  \t | %r\n' % (k, v['type'], v.get('value', None))
         return display.expandtabs(10)
 
     def set_value(self, key, value):
@@ -505,6 +505,11 @@ class PostfixEvaluator(object):
             return None
 
     def perform_assignment(self, op1, op2):
+        """
+        Arguments:
+            op1 -- value
+            op2 -- varname
+        """
         symbol = self.find_symbol(op2)
 
         if symbol is not None:
