@@ -55,12 +55,12 @@ class SymbolTable(object):
     def __str__(self):
         display = (
             'SYMBOL TABLE\n' +
-            '-' * 30 + '\n'
-            'NAME\t\t| TYPE\n' +
-            '-' * 30 + '\n'
+            '-' * 40 + '\n'
+            'NAME\t\t| TYPE \t | VALUE\n' +
+            '-' * 40 + '\n'
         )
         for k, v in self._table.items():
-            display += '%s\t\t| %s\n' % (k, v['type'])
+            display += '%s\t\t| %s \t | %r\n' % (k, v['type'], v.get('value', None))
         return display.expandtabs(10)
 
     def set_value(self, key, value):
@@ -362,7 +362,7 @@ class SyntaxChecker(object):
             self.parse_tree.current = token_node
             operator_stack = self.operator_stack
             while operator_stack:
-                top_node = operator_stack[len(operator_stack)-1]
+                top_node = operator_stack[len(operator_stack) - 1]
                 # transfer operations not part of mean expression
                 while len(top_node.children) < top_node.max_children:
                     operator_stack.pop()
@@ -558,7 +558,7 @@ if __name__ == '__main__':
                     # this is temporary
                     for item in parse_list:
                         print item.lexeme,
-                    print ''
+                    print
 
                     #evaluation
                     postfix_evaluator = PostfixEvaluator(symbol_table, parse_list)
