@@ -465,8 +465,8 @@ class PostfixEvaluator(object):
                     user_input = raw_input()
                     self.get_user_input(var, user_input)
 
-            if not self.operand_stack.isEmpty():
-                return self.operand_stack.pop()
+        if not self.operand_stack.isEmpty():
+            return self.operand_stack.pop()
 
     def get_mean(self, **kwargs):
         print
