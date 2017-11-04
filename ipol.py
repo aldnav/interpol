@@ -725,7 +725,9 @@ if __name__ == '__main__':
                     postfix_evaluator.evaluate()
                     evaluation_error = postfix_evaluator.error_msg
                     if evaluation_error:
-                        print '%s: %s %s' % (filename, i + 1, evaluation_error)
+                        print '%s\n%s %s' % (evaluation_error,
+                            filename, i + 1)
+                        print '  ->', line
                         has_error = True
                         break
                     parse_list = []
