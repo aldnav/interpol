@@ -54,10 +54,8 @@ class SymbolTable(object):
 
     def __str__(self):
         display = (
-            'SYMBOL TABLE\n' +
-            '-' * 40 + '\n'
-            'NAME\t\t| TYPE \t | VALUE\n' +
-            '-' * 40 + '\n'
+            'SYMBOL TABLE\n'
+            'NAME\t\t| TYPE \t\t | VALUE\n'
         )
         for k, v in self._table.items():
             display += '%s\t\t| %s \t | %r\n' % (k, v['type'], v.get('value', None))
