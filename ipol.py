@@ -53,6 +53,8 @@ class SymbolTable(object):
         return self._table.get(key, None)
 
     def __str__(self):
+        if len(self._table.keys()) == 0:
+            return 'SYMBOL TABLE is empty'
         display = (
             'SYMBOL TABLE\n'
             'NAME\t\t| TYPE \t\t | VALUE\n'
