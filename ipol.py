@@ -385,13 +385,13 @@ class Stack(object):
         self.tokens.insert(0, token)
 
     def pop(self):
-        return self.items.pop(0)
+        return self.tokens.pop(0)
 
     def peek(self):
-        return self.items[0]
+        return self.tokens[0]
 
     def size(self):
-        return len(self.items)
+        return len(self.tokens)
 
 
     # def doAdvArithmetic(self, operator, *args, **kwargs):
@@ -463,7 +463,6 @@ if __name__ == '__main__':
                     # This is temporary:
                     # evaluate
                     parse_list.pop()
-
             else:
                 if end_state is not None:
                     print "%s: %s Syntax Error! expected " % (filename, i),
