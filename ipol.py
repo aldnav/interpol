@@ -717,10 +717,6 @@ if __name__ == '__main__':
                 end_state = syntax_checker.end_state
                 if end_state in accepting_states:
                     walk_tree_df_postorder(syntax_checker.parse_tree.root, visit)
-                    # this is temporary
-                    for item in parse_list:
-                        print item.token.lexeme,
-                    print
 
                     # evaluation
                     postfix_evaluator = PostfixEvaluator(symbol_table, parse_list)
