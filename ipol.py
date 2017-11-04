@@ -460,6 +460,10 @@ class PostfixEvaluator(object):
                     print self.get_token_value(self.operand_stack.pop()),
                 elif token.lexeme == 'GIVEYOU!!':
                     print self.get_token_value(self.operand_stack.pop())
+                elif token.lexeme == 'GIVEME?':
+                    var = self.operand_stack.pop()
+                    user_input = raw_input()
+                    self.get_user_input(var, user_input)
 
             if not self.operand_stack.isEmpty():
                 return self.operand_stack.pop()
@@ -545,6 +549,25 @@ class PostfixEvaluator(object):
         elif operator == 'ROOT':
             result = (op1 ** (1 / op2))
         return Token('integer', result, '<INTEGER>')
+
+    def get_user_input(self, var, user_input):
+        """
+        Arguments:
+            var -- variable to assign value
+            user_input -- the user raw input
+        """
+        input_token = None
+        if self.find_symbol(var)['type'] == 'integer':
+            try:
+                input_token = Token('integer', int(user_input), '<INTEGER>')
+            except Exception:
+                self.error_msg = 'Input Error! '\
+                    'Malformed integer input for `%s`' % var.lexeme
+        else:
+            input_token = Token('string', '[%s]' % user_input, '<STRING>')
+        if len(self.error_msg) == 0:
+            self.perform_assignment(input_token, var)
+        return input_token
 
 
 class Stack(object):
