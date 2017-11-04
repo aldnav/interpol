@@ -475,6 +475,10 @@ class PostfixEvaluator(object):
                     print self.get_token_value(self.operand_stack.pop())
                 elif token.lexeme == 'GIVEME?':
                     var = self.operand_stack.pop()
+                    if self.find_symbol(var) is None:
+                        self.error_msg = 'Input Error! '\
+                            'Symbol `%s` for input not found.' % var.lexeme
+                        break
                     user_input = raw_input()
                     self.get_user_input(var, user_input)
                 elif token.lexeme == 'MEAN':
