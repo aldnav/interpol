@@ -77,7 +77,7 @@ primitives = (
     Token('end_program', 'RUPTURE', 'END'),
 
     Token('type_string', 'DSTR', '<DATATYPE>'),
-    Token('type_int', 'DINT', '<DATATYPE>'),
+    Token('type_integer', 'DINT', '<DATATYPE>'),
 
     Token('addition', 'PLUS', '<OPERATOR>'),
     Token('subtraction', 'MINUS', '<OPERATOR>'),
@@ -179,7 +179,7 @@ def add_to_symbol_table(tokens):
             next_token = tokens[i + 1]
         except Exception:
             continue
-        if (token.name in ['type_int', 'type_string'] and
+        if (token.name in ['type_integer', 'type_string'] and
                 next_token.name == 'identifier'):
             symbol_table.insert(next_token.lexeme, {
                 'name': next_token.lexeme,
@@ -423,30 +423,95 @@ class PostfixEvaluator(object):
     def evaluate(self):
 
         for token in self.parse_list:
-            if token.group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
-                self.operand_stack.push(token)
-            elif token.group == '<OPERATOR>':
-                operand1 = self.operand_stack.pop()
-                operand2 = self.operand_stack.pop()
-                result = self.do_basic_arithmetic(operand1.lexeme, operand2.lexeme, token.lexeme)
-                self.operand_stack.push(result)
-            elif token.group in ['STORE']:
-                operand1 = self.operand_stack.pop()
-                operand2 = self.operand_stack.pop()
-                self.perform_assignment(operand1, operand2)
+            if self.error_msg:
+                return None
+            else:
+                if token.group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
+                    self.operand_stack.push(token)
+                elif token.group == '<OPERATOR>':
+                    temp_operand2 = self.operand_stack.pop()
+                    operand2 = self.get_integer_operand(temp_operand2)
+                    if operand2 is not None:
+                        temp_operand1 = self.operand_stack.pop()
+                        operand1 = self.get_integer_operand(temp_operand1)
+                        if operand1 is not None:
+                            result = self.do_basic_arithmetic(operand1, operand2, token.lexeme)
+                            self.operand_stack.push(result)
+                        else:
+                            break
+                    else:
+                        break
+                elif token.group in ['STORE']:
+                    operand2 = self.operand_stack.pop()
+                    operand1 = self.operand_stack.pop()
+                    self.perform_assignment(operand1, operand2)
+                elif token.group == '<DATATYPE>':
+                    operand1 = self.operand_stack.pop()
+                    if(self.operand_stack.isEmpty()):
+                        # bind operand1 with datatype
+                        print ''
+                    else:
+                        # bind datatype and value
+                        print ''
+                elif token.lexeme == 'GIVEYOU!':
+                    print self.get_symbol_value(self.operand_stack.pop()),
+                elif token.lexeme == 'GIVEYOU!!':
+                    print self.get_symbol_value(self.operand_stack.pop())
 
         if not self.operand_stack.isEmpty():
             return self.operand_stack.pop()
 
-    def perform_assignment(self, op1, op2):
-        symbol = self.symbol_table.lookup(op2.lexeme)
+    def get_integer_operand(self, token):
+
+        if isinstance(token, int):
+            return token
+        elif token.name == 'integer':
+            return int(token.lexeme)
+        else:
+            operand = self.get_symbol_value(token)
+            if operand:
+                if self.get_symbol_type(token) == 'integer':
+                    return int(operand)
+                else:
+                    return None
+            else:
+                return None
+
+    def get_symbol_type(self, token):
+        symbol = self.find_symbol(token)
+
         if symbol is not None:
-            if symbol.data_type == op1.name:
+            return symbol['type']
+
+    def get_symbol_value(self, token):
+
+        if isinstance(token, int) or isinstance(token, basestring):
+            return token
+        symbol = self.find_symbol(token)
+
+        if symbol is not None:
+            if symbol['value']:
+                return symbol['value']
+            else:
+                self.error_msg = 'Uninitialized symbol: %s' % (symbol.lexeme)
+
+    def find_symbol(self, token):
+        symbol = self.symbol_table.lookup(token.lexeme)
+
+        if symbol is not None:
+            return symbol
+        else:
+            self.error_msg = 'Cannot find symbol: "%s"!' % (token.lexeme)
+            return None
+
+    def perform_assignment(self, op1, op2):
+        symbol = self.find_symbol(op2)
+
+        if symbol is not None:
+            if symbol['type'] == op1.name:
                 symbol_table.set_value(op2.lexeme, op1.lexeme)
             else:
                 self.error_msg = 'Type Error! %s and %s do not have the same datatype.' % (op1.lexeme, op2.lexeme)
-        else:
-            self.error_msg = 'Cannot find symbol: %s!' % (op2.lexeme)
 
     def do_basic_arithmetic(self, op1, op2, operator):
         try:
@@ -459,17 +524,17 @@ class PostfixEvaluator(object):
             raise e
         result = 0
         if operator == 'PLUS':
-            result = op1 + op2
+            result int(op1 + op2)
         elif operator == 'MINUS':
-            result = op1 - op2
+            result int(op1 - op2)
         elif operator == 'TIMES':
-            result = op1 * op2
+            result int(op1 * op2)
         elif operator == 'DIVBY':
-            result = op1 / op2
+            result int(op1 / op2)
         elif operator == 'RAISE':
-            result = op1 ** op2
+            result int(op1 ** op2)
         elif operator == 'ROOT':
-            result = op1 ** (1 / op2)
+            result = (op1 ** (1 / op2))
         return Token('integer', result, '<INTEGER>')
 
 
@@ -558,11 +623,16 @@ if __name__ == '__main__':
                     # this is temporary
                     for item in parse_list:
                         print item.lexeme,
-                    print
+                    print 
 
-                    #evaluation
+                    # evaluation
                     postfix_evaluator = PostfixEvaluator(symbol_table, parse_list)
                     postfix_evaluator.evaluate()
+                    evaluation_error = postfix_evaluator.error_msg
+                    if evaluation_error:
+                        print '%s: %s %s' % (filename, i+1, evaluation_error)
+                        has_error = True
+                        break
                     parse_list = []
                 else:
                     index = 0
@@ -573,7 +643,7 @@ if __name__ == '__main__':
                         else:
                             print token.lexeme,
                         index = index + 1
-                    print ''
+                    print
                     if syntax_checker.error_msg:
                         print syntax_checker.error_msg
                     else:
