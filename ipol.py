@@ -475,9 +475,9 @@ class PostfixEvaluator(object):
                         operand2 = self.operand_stack.pop()
                         self.perform_assignment(operand1, operand2)
                 elif token.lexeme == 'GIVEYOU!':
-                    print '>>', self.get_token_value(self.operand_stack.pop()),
+                    print '>>', self.get_token_output(self.operand_stack.pop()),
                 elif token.lexeme == 'GIVEYOU!!':
-                    print '>>', self.get_token_value(self.operand_stack.pop())
+                    print '>>', self.get_token_output(self.operand_stack.pop())
                 elif token.lexeme == 'GIVEME?':
                     var = self.operand_stack.pop()
                     if self.find_symbol(var) is None:
@@ -515,6 +515,21 @@ class PostfixEvaluator(object):
 
         if not self.operand_stack.isEmpty():
             return self.operand_stack.pop()
+
+    def get_token_output(self, token):
+        if (isinstance(token, Token) and (token.name is not 'identifier')):
+            return token.lexeme.replace('[', '').replace(']', '')
+        else:
+            symbol = self.find_symbol(token)
+
+            if symbol is not None:
+                if symbol['value']:
+                    if symbol['type'] == 'string':
+                        return symbol['value'].replace('[','').replace(']','')
+                    else:
+                        return symbol['value']
+                else:
+                    self.error_msg = 'Uninitialized symbol: %s' % (symbol.lexeme)
 
     def get_distance(self, op1, op2, op3, op4):
         dist = math.sqrt((op3 - op1) ** 2 + (op4 - op2) ** 2)
