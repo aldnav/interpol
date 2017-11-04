@@ -61,8 +61,11 @@ class SymbolTable(object):
             'NAME\t\t| TYPE \t\t | VALUE\n'
         )
         for k, v in self._table.items():
+            var_value = v.get('value', None)
+            if v['type'] == 'string' and var_value is not None:
+                var_value = var_value[1:-1]
             display += '%s\t\t| %s  \t | %r\n' % (
-                k, v['type'], v.get('value', None))
+                k, v['type'], var_value)
         return display.expandtabs(10)
 
     def set_value(self, key, value):
