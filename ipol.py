@@ -290,6 +290,11 @@ class SyntaxChecker(object):
     def accept_exp(self):
         is_accepted = False
         token = self.tokens[self.token_index]
+        if self.token_index != 0:
+            if (self.tokens[self.token_index-1].lexeme == 'GIVEME?' and
+                    token.group not in ['<IDENTIFIIER>']):
+                self.error_msg = 'Syntax Error! Expected <IDENTIFIER>.'
+                return False
         if token.group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
             token_node = Node(token, 0)
             if self.token_index != 0:
@@ -297,6 +302,7 @@ class SyntaxChecker(object):
                         '<OPERATOR>', '<DIST>', '<MEAN>'] and
                         token.group == '<STRING>'):
                     self.error_msg = 'Type Error! String cannot be an operand.'
+                    return False
             if (len(self.parse_tree.current.children) ==
                     self.parse_tree.current.max_children):
                 self.parse_tree.current = self.parse_tree.current.parent
