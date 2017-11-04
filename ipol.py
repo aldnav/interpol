@@ -325,6 +325,7 @@ class SyntaxChecker(object):
             if is_exp:
                 is_exp = self.accept_exp()
                 if is_exp:
+                    token = self.tokens[self.token_index]
                     if token.group == 'AND':
                         self.token_index = self.token_index + 1
 #                        self.tokens.remove(self.tokens[0])
