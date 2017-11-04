@@ -449,18 +449,28 @@ class PostfixEvaluator(object):
             self.error_msg = 'Cannot find symbol: %s!' % (op2.lexeme)
 
     def do_basic_arithmetic(self, op1, op2, operator):
+        try:
+            op1 = int(op1)
+        except Exception as e:
+            raise e
+        try:
+            op2 = int(op2)
+        except Exception as e:
+            raise e
+        result = 0
         if operator == 'PLUS':
-            return int(op1 + op2)
+            result = op1 + op2
         elif operator == 'MINUS':
-            return int(op1 - op2)
+            result = op1 - op2
         elif operator == 'TIMES':
-            return int(op1 * op2)
+            result = op1 * op2
         elif operator == 'DIVBY':
-            return int(op1 / op2)
+            result = op1 / op2
         elif operator == 'RAISE':
-            return int(op1 ** op2)
+            result = op1 ** op2
         elif operator == 'ROOT':
-            return int(op1 ** (1/op2))
+            result = op1 ** (1 / op2)
+        return Token('integer', result, '<INTEGER>')
 
 
 class Stack(object):
