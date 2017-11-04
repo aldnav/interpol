@@ -447,12 +447,14 @@ class PostfixEvaluator(object):
                     self.perform_assignment(operand1, operand2)
                 elif token.group == '<DATATYPE>':
                     operand1 = self.operand_stack.pop()
+                    operand2 = self.operand_stack.pop()
+                    # @NOTE: condition is untested
                     if(self.operand_stack.isEmpty()):
                         # bind operand1 with datatype
-                        print ''
+                        self.perform_assignment(operand1, operand2)
                     else:
                         # bind datatype and value
-                        print ''
+                        self.perform_assignment(operand1, operand2)
                 elif token.lexeme == 'GIVEYOU!':
                     print self.get_symbol_value(self.operand_stack.pop()),
                 elif token.lexeme == 'GIVEYOU!!':
