@@ -61,7 +61,8 @@ class SymbolTable(object):
             'NAME\t\t| TYPE \t\t | VALUE\n'
         )
         for k, v in self._table.items():
-            display += '%s\t\t| %s  \t | %r\n' % (k, v['type'], v.get('value', None))
+            display += '%s\t\t| %s  \t | %r\n' % (
+                k, v['type'], v.get('value', None))
         return display.expandtabs(10)
 
     def set_value(self, key, value):
@@ -69,7 +70,7 @@ class SymbolTable(object):
         if self.lookup(key) is not None:
             try:
                 value = int(value)
-            except Exception as e:
+            except Exception:
                 pass
             self.lookup(key)['value'] = value
             return value
@@ -289,7 +290,7 @@ class SyntaxChecker(object):
         if token.group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
             token_node = Node(token, 0)
             if self.token_index != 0:
-                if (self.tokens[self.token_index-1].group in [
+                if (self.tokens[self.token_index - 1].group in [
                         '<OPERATOR>', '<DIST>', '<MEAN>'] and
                         token.group == '<STRING>'):
                     self.error_msg = 'Type Error! String cannot be an operand.'
@@ -442,7 +443,8 @@ class PostfixEvaluator(object):
                         temp_operand1 = self.operand_stack.pop()
                         operand1 = self.get_integer_operand(temp_operand1)
                         if operand1 is not None:
-                            result = self.do_basic_arithmetic(operand1, operand2, token.lexeme)
+                            result = self.do_basic_arithmetic(
+                                operand1, operand2, token.lexeme)
                             self.operand_stack.push(result)
                         else:
                             break
@@ -471,7 +473,8 @@ class PostfixEvaluator(object):
                     index = 0
                     operand_size = len(node.children)
                     while index < operand_size:
-                        operand = self.get_integer_operand(self.operand_stack.pop())
+                        operand = self.get_integer_operand(
+                            self.operand_stack.pop())
                         items.append(operand)
                         index = index + 1
                     self.operand_stack.push(self.get_mean(items))
@@ -488,16 +491,15 @@ class PostfixEvaluator(object):
                                 temp_operand1 = self.operand_stack.pop()
                                 operand1 = self.get_integer_operand(temp_operand1)
                                 if operand1 is not None:
-                                    result = self.get_distance(operand1, operand2, operand3, operand4)
+                                    result = self.get_distance(
+                                        operand1, operand2, operand3, operand4)
                                     self.operand_stack.push(result)
 
         if not self.operand_stack.isEmpty():
             return self.operand_stack.pop()
 
     def get_distance(self, op1, op2, op3, op4):
-
         dist = math.sqrt((op3 - op1) ** 2 + (op4 - op2) ** 2)
-
         return Token('integer', dist, '<INTEGER>')
 
     def get_mean(self, operands):
@@ -557,7 +559,9 @@ class PostfixEvaluator(object):
             if symbol['type'] == op1.name:
                 symbol_table.set_value(op2.lexeme, op1.lexeme)
             else:
-                self.error_msg = 'Type Error! %s and %s do not have the same datatype.' % (op1.lexeme, op2.lexeme)
+                self.error_msg = 'Type Error! '\
+                    '%s and %s do not have the same datatype.' % (
+                        op1.lexeme, op2.lexeme)
 
     def do_basic_arithmetic(self, op1, op2, operator):
         try:
@@ -635,6 +639,7 @@ def walk_tree_df_postorder(node, visit):
         walk_tree_df_postorder(child, visit)
     visit(node)
 
+
 parse_list = []
 
 
@@ -678,11 +683,13 @@ if __name__ == '__main__':
             elif temp_tokens[0].name == 'end_program' and not code_ended:
                 code_ended = True
             elif code_ended:
-                print '%s: %s Syntax Error! Expected end of file.' % (filename, i)
+                print '%s: %s Syntax Error! Expected end of file.' % (
+                    filename, i)
                 has_error = True
                 break  # end interpretation if error is found
             else:
-                syntax_checker = SyntaxChecker(temp_tokens, symbol_table, code_began, code_ended)
+                syntax_checker = SyntaxChecker(
+                    temp_tokens, symbol_table, code_began, code_ended)
                 syntax_checker.accept_interpol(interpol_dfa)
                 end_state = syntax_checker.end_state
                 if end_state in accepting_states:
@@ -697,7 +704,7 @@ if __name__ == '__main__':
                     postfix_evaluator.evaluate()
                     evaluation_error = postfix_evaluator.error_msg
                     if evaluation_error:
-                        print '%s: %s %s' % (filename, i+1, evaluation_error)
+                        print '%s: %s %s' % (filename, i + 1, evaluation_error)
                         has_error = True
                         break
                     parse_list = []
