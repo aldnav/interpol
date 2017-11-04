@@ -1,3 +1,11 @@
+"""
+INTERPOL INTERPRETER
+
+IS 214
+Bernales, Alma Mae
+Navarro, Aldrin
+"""
+
 import argparse
 import re
 import sys
