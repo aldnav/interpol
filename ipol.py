@@ -598,6 +598,8 @@ if __name__ == '__main__':
     has_error = False
 
     for i, line in enumerate(lines):
+        if line.strip().startswith('#'):
+            continue
         print i + 1,
         if line:  # skip empty lines
             tokens = tokenize(line)
