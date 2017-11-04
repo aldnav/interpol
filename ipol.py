@@ -55,9 +55,9 @@ class SymbolTable(object):
 
     def __str__(self):
         if len(self._table.keys()) == 0:
-            return 'SYMBOL TABLE is empty'
+            return '\nSYMBOL TABLE is empty\n'
         display = (
-            'SYMBOL TABLE\n'
+            '\nSYMBOL TABLE\n'
             'NAME\t\t| TYPE \t\t | VALUE\n'
         )
         for k, v in self._table.items():
@@ -472,9 +472,9 @@ class PostfixEvaluator(object):
                         operand2 = self.operand_stack.pop()
                         self.perform_assignment(operand1, operand2)
                 elif token.lexeme == 'GIVEYOU!':
-                    print self.get_token_value(self.operand_stack.pop()),
+                    print '>>', self.get_token_value(self.operand_stack.pop()),
                 elif token.lexeme == 'GIVEYOU!!':
-                    print self.get_token_value(self.operand_stack.pop())
+                    print '>>', self.get_token_value(self.operand_stack.pop())
                 elif token.lexeme == 'GIVEME?':
                     var = self.operand_stack.pop()
                     if self.find_symbol(var) is None:
@@ -685,7 +685,7 @@ if __name__ == '__main__':
     for i, line in enumerate(lines):
         if line.strip().startswith('#'):
             continue
-        print i + 1,
+        print i + 1, line,
         if line:  # skip empty lines
             tokens = []
             try:
@@ -698,7 +698,6 @@ if __name__ == '__main__':
                         filename, i + 1)
                     print '  ->', line
                     break
-            print tokens
             # conditions for trapping codes outside begin and rupture
 
             temp_tokens = tokens
@@ -708,8 +707,9 @@ if __name__ == '__main__':
             elif temp_tokens[0].name == 'end_program' and not code_ended:
                 code_ended = True
             elif code_ended:
-                print '%s: %s Syntax Error! Expected end of file.' % (
+                print 'Syntax Error! Expected end of file.\n%s: %s ' % (
                     filename, i)
+                print '  ->', line
                 has_error = True
                 break  # end interpretation if error is found
             else:
@@ -749,3 +749,6 @@ if __name__ == '__main__':
                     break  # end interpretation if error is found
         if not has_error:
             print symbol_table
+            print 'LEXEMES AND TOKENS:',
+            print tokens
+            print
