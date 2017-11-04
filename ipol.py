@@ -202,7 +202,6 @@ interpol_dfa = {
     11: {'IN': 12},
     12: {'<IDENTIFIER>': 9},
     13: {'<EXP>': None},
-    14: {'<END_OF_LINE>': None}  # dead end state
 }
 
 accepting_states = [4, 6, 9]
@@ -216,106 +215,175 @@ class SyntaxChecker(object):
         self.symbol_table = symbol_table
         self.code_began = code_began
         self.code_ended = code_ended
+        self.error_msg = ''
+        self.token_index = 0  # tracks current token index
+        self.end_state = 1  # If end state is an element of final state, line has no syntax error.
+        self.operator_stack = []
 
     def accept_interpol(self, transitions):
         state = 1
+        tokens_size = len(self.tokens)
         # iterate through tokens produced by lexer
-        while self.tokens:
+        while self.token_index < tokens_size:
             # simulation of dfa for interpol grammar
-            group_name = self.tokens[0].group
-            temp_state = transitions[state].get(self.tokens[0].group, None)
-            print 'state %s %s' % (temp_state, self.tokens[0].group),
-            if self.tokens[0].name == 'begin_program':
-                print 'Invalid begin token.'
-                return None
-            elif self.tokens[0].name == 'end_program':
-                print 'Invalid token. Code has ended already.'
-                return None
+            token = self.tokens[self.token_index]
+            temp_state = transitions[state].get(token.group, None)
+            if token.name == 'begin_program':
+                self.error_msg = 'Invalid begin token.'
+                state = 13  # set to dead end state
+                break
             elif code_began:
                 if temp_state is None:
                     # if current state is a state with transition for expression
                     # and the current token is possibly an expression
-                    if (group_name in [
+                    if (token.group in [
                             '<IDENTIFIER>', '<OPERATOR>', '<STRING>', '<INTEGER>',
                             '<DIST>', '<MEAN>'] and
                             state in [5, 10, 7, 8]):
                         if self.accept_exp():
                             state = transitions[state].get('<EXP>', None)
                         else:
-                            return 13   # send to dead end
+                            if not self.error_msg:
+                                self.error_msg = 'Invalid expression.'
+                            state = 13  # set to dead end state
+                            break   # send to dead end
                     else:
                         if state in [5, 10, 7, 8]:
-                            return 13
+                            self.error_msg = 'Expected expression.'
+                            state = 13  # set to dead end state
+
                         else:
-                            return state  # send to dead end
+                            if state == 4:
+                                self.error_msg = 'Expected WITH keyword.'
+                                state = 13
+                        break
                 else:
-                    if group_name == '<IO_FUNCTION>':
-                        token_node = Node(self.tokens[0], 1)
+                    if token.group == '<IO_FUNCTION>':
+                        token_node = Node(token, 1)
                         self.parse_tree.add_token(token_node)
                         self.parse_tree.current = token_node
-                    elif group_name in ['<DATATYPE>', 'STORE']:
-                        token_node = Node(self.tokens[0], 2)
+                    elif token.group in ['<DATATYPE>', 'STORE']:
+                        token_node = Node(token, 2)
                         self.parse_tree.add_token(token_node)
                         self.parse_tree.current = token_node
-                    elif group_name == '<IDENTIFIER>':
-                        token_node = Node(self.tokens[0], 0)
+                    elif token.group == '<IDENTIFIER>':
+                        token_node = Node(token, 0)
                         self.parse_tree.add_token(token_node)
                     state = temp_state
-                    self.tokens.remove(self.tokens[0])
+                    self.token_index = self.token_index + 1
             else:
-                print 'Syntax Error! Expected BEGIN token'
-                return None
-        return state
+                self.error_msg = 'Syntax Error! Expected BEGIN token'
+                state = 13  # set to dead end state
+                break
+        self.end_state = state
 
     # check if tokens form an expression
     def accept_exp(self):
         is_accepted = False
-        if self.tokens[0].group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
-            token_node = Node(self.tokens[0], 0)
+        token = self.tokens[self.token_index]
+        if token.group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
+            token_node = Node(token, 0)
+            if self.token_index != 0:
+                if (self.tokens[self.token_index-1].group in [
+                        '<OPERATOR>', '<DIST>', '<MEAN>'] and
+                        token.group == '<STRING>'):
+                    self.error_msg = 'Type Error! String cannot be an operand.'
             if (len(self.parse_tree.current.children) ==
                     self.parse_tree.current.max_children):
                 self.parse_tree.current = self.parse_tree.current.parent
             self.parse_tree.add_token(token_node)
-            self.tokens.remove(self.tokens[0])
+            self.token_index = self.token_index + 1
+#            self.tokens.remove(self.tokens[0])
             return True
 
         # for plus, minus, times, divby, modu, raise and nth root operations
-        elif self.tokens[0].group == '<OPERATOR>':
-            token_node = Node(self.tokens[0], 2)
+        elif token.group == '<OPERATOR>':
+            token_node = Node(token, 2)
             self.parse_tree.add_token(token_node)
-            self.parse_tree.current = token_node  # self.parse_tree.current.children[-1]
-            self.tokens.remove(self.tokens[0])
-            if self.accept_exp():
-                if self.accept_exp():
+            self.parse_tree.current = token_node
+            self.token_index = self.token_index + 1
+#            self.tokens.remove(self.tokens[0])
+            self.operator_stack.append(token_node)
+            is_exp = self.accept_exp()
+            if is_exp:
+                is_exp = self.accept_exp()
+                if is_exp:
+                    self.operator_stack.pop()
                     return True
+                elif is_exp is None:
+                    return True
+            elif is_exp is None:
+                return True
 
         # for distance operation
-        elif self.tokens[0].group == '<DIST>':
-            token_node = Node(self.tokens[0], 4)
+        elif token.group == '<DIST>':
+            token_node = Node(token, 4)
             self.parse_tree.add_token(token_node)
-            self.parse_tree.current = token_node  # self.parse_tree.current.children[-1]
-            self.tokens.remove(self.tokens[0])
-            if self.accept_exp():
-                if self.accept_exp():
-                    if self.tokens[0].group == 'AND':
-                        self.tokens.remove(self.tokens[0])
-                        if self.accept_exp():
-                            if self.accept_exp():
+            self.parse_tree.current = token_node
+            self.token_index = self.token_index + 1
+#            self.tokens.remove(self.tokens[0])
+            self.operator_stack.append(token_node)
+            is_exp = self.accept_exp()
+            if is_exp:
+                is_exp = self.accept_exp()
+                if is_exp:
+                    if token.group == 'AND':
+                        self.token_index = self.token_index + 1
+#                        self.tokens.remove(self.tokens[0])
+                        is_exp = self.accept_exp()
+                        if is_exp:
+                            is_exp = self.accept_exp()
+                            if is_exp:
                                 self.parse_tree.current = self.parse_tree.current.parent
+                                self.operator_stack.pop()
                                 return True
+                            elif is_exp is None:
+                                return True
+                        elif is_exp is None:
+                            return True
+                elif is_exp is None:
+                    return True
+            elif is_exp is None:
+                return True
 
         # for mean operation
-        elif self.tokens[0].group == '<MEAN>':
-            token_node = Node(self.tokens[0], None)
+        elif token.group == '<MEAN>':
+            token_node = Node(token, None)
             self.parse_tree.add_token(token_node)
-            self.parse_tree.current = token_node  # self.parse_tree.current.children[-1]
-            self.tokens.remove(self.tokens[0])
-            while self.tokens[0].group not in ['<OPERATOR>', '<DIST>'] and \
-                    self.accept_exp() and \
-                    self.tokens:
-                is_accepted = True
+            self.parse_tree.current = token_node
+            self.token_index = self.token_index + 1
+            while (self.token_index < len(self.tokens) and
+                    token.group in ['<MEAN>', '<OPERATOR>', '<DIST>',
+                                    '<INTEGER>', '<IDENTIFIER>']):
+                if self.accept_exp():
+                    is_accepted = True
+                else:
+                    is_accepted = False
+            self.parse_tree.current = token_node
+            operator_stack = self.operator_stack
+            while operator_stack:
+                top_node = operator_stack[len(operator_stack)-1]
+                # transfer operations not part of mean expression
+                while len(top_node.children) < top_node.max_children:
+                    operator_stack.pop()
+                    if len(self.parse_tree.current.children) > 0:
+                        last_child = self.parse_tree.current.children.pop()
+                        top_node.add_child(last_child)
+                        last_child.parent = top_node
+                    else:
+                        return False
+                is_accepted = None
+        else:
+            is_accepted = False
 
         return is_accepted
+
+    def print_error_msg(self):
+        for token in interpol_dfa[self.end_state].keys():
+            if token == interpol_dfa[end_state].keys()[-1]:
+                print "%s " % token
+            else:
+                print "%s, " % token,
 
 
 class Node(object):
@@ -351,27 +419,26 @@ class PostfixEvaluator(object):
 
         for token in parse_list:
             if token.group in ['<OPERATOR>']:
-                operand1 = operandStack.pop()
-                operand2 = operandStack.pop()
-                result = self.doBasicArithmetic(
-                    operand1, operand2, token.lexeme)
-                operandStack.push(result)
+                operand1 = operand_stack.pop()
+                operand2 = operand_stack.pop()
+                result = self.do_basic_arithmetic(operand1, operand2, token.lexeme)
+                operand_stack.push(result)
 
-        return operandStack.pop()
+        return operand_stack.pop()
 
-    def doBasicArithmetic(self, op1, op2, operator):
+    def do_basic_arithmetic(self, op1, op2, operator):
         if operator == 'PLUS':
-            return op1 + op2
+            return int(op1 + op2)
         elif operator == 'MINUS':
-            return op1 - op2
+            return int(op1 - op2)
         elif operator == 'TIMES':
-            return op1 * op2
+            return int(op1 * op2)
         elif operator == 'DIVBY':
-            return op1 / op2
+            return int(op1 / op2)
         elif operator == 'RAISE':
-            return op1 ** op2
+            return int(op1 ** op2)
         elif operator == 'ROOT':
-            return op1 ** (1 / op2)
+            return int(op1 ** (1/op2))
 
 
 class Stack(object):
@@ -394,13 +461,8 @@ class Stack(object):
         return len(self.tokens)
 
 
-    # def doAdvArithmetic(self, operator, *args, **kwargs):
-    #     if operator == 'DIST':
-
-
 def visit(node):
-    print node.token
-    return node.token
+    parse_list.append(node)
 
 
 def walk_tree_df_postorder(node, visit):
@@ -409,10 +471,10 @@ def walk_tree_df_postorder(node, visit):
         return
     for child in node.children:
         walk_tree_df_postorder(child, visit)
-    parse_list.append(visit(node))
-
+    visit(node)
 
 parse_list = []
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -440,38 +502,47 @@ if __name__ == '__main__':
 
     for i, line in enumerate(lines):
         print i + 1,
-        tokens = tokenize(line)
-
-        # conditions for trapping codes outside begin and rupture
-        if tokens[0].name == 'begin_program' and not code_began:
-            code_began = True
-        elif tokens[0].name == 'end_program' and not code_ended:
-            code_ended = True
-        elif code_ended:
-            print '%s: %s Syntax Error! Code already ended' % (filename, i)
-            has_error = True
-            break
-        else:
-            syntax_checker = SyntaxChecker(
-                tokens, symbol_table, code_began, code_ended)
+        if line:  # skip empty lines
+            tokens = tokenize(line)
             print tokens
-            end_state = syntax_checker.accept_interpol(interpol_dfa)
-            if end_state in accepting_states:
-                print "post order"
-                walk_tree_df_postorder(syntax_checker.parse_tree.root, visit)
-                while parse_list:
-                    # This is temporary:
-                    # evaluate
-                    parse_list.pop()
-            else:
-                if end_state is not None:
-                    print "%s: %s Syntax Error! expected " % (filename, i),
-                    for token in interpol_dfa[end_state].keys():
-                        if token == interpol_dfa[end_state].keys()[-1]:
-                            print "%s " % (token)
-                        else:
-                            print "%s, " % (token),
+            # conditions for trapping codes outside begin and rupture
+
+            temp_tokens = tokens
+
+            if temp_tokens[0].name == 'begin_program' and not code_began:
+                code_began = True
+            elif temp_tokens[0].name == 'end_program' and not code_ended:
+                code_ended = True
+            elif code_ended:
+                print '%s: %s Syntax Error! Expected end of file.' % (filename, i)
                 has_error = True
                 break  # end interpretation if error is found
-    if not has_error:
-        print symbol_table
+            else:
+                syntax_checker = SyntaxChecker(temp_tokens, symbol_table, code_began, code_ended)
+                syntax_checker.accept_interpol(interpol_dfa)
+                end_state = syntax_checker.end_state
+                if end_state in accepting_states:
+                    walk_tree_df_postorder(syntax_checker.parse_tree.root, visit)
+                    for item in parse_list:
+                        print item.token.lexeme,
+                    print ''
+
+                    parse_list = []
+                else:
+                    index = 0
+                    for token in tokens:
+                        if index == syntax_checker.token_index:
+                            # -> points at the source of syntax error
+                            print '-> %s ' % token.lexeme,
+                        else:
+                            print token.lexeme,
+                        index = index + 1
+                    print ''
+                    if syntax_checker.error_msg:
+                        print syntax_checker.error_msg
+                    else:
+                        syntax_checker.print_error_msg()
+                    has_error = True
+                    break  # end interpretation if error is found
+        if not has_error:
+            print symbol_table
