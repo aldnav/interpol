@@ -449,30 +449,26 @@ class PostfixEvaluator(object):
                     self.perform_assignment(operand1, operand2)
                 elif token.group == '<DATATYPE>':
                     operand1 = self.operand_stack.pop()
-                    operand2 = self.operand_stack.pop()
-                    # @NOTE: condition is untested
-                    if(self.operand_stack.isEmpty()):
+                    if(self.operand_stack.isEmpty() is False):
                         # bind operand1 with datatype
-                        self.perform_assignment(operand1, operand2)
-                    else:
-                        # bind datatype and value
+                        operand2 = self.operand_stack.pop()
                         self.perform_assignment(operand1, operand2)
                 elif token.lexeme == 'GIVEYOU!':
-                    print self.get_symbol_value(self.operand_stack.pop()),
+                    print self.get_token_value(self.operand_stack.pop()),
                 elif token.lexeme == 'GIVEYOU!!':
-                    print self.get_symbol_value(self.operand_stack.pop())
+                    print self.get_token_value(self.operand_stack.pop())
 
-        if not self.operand_stack.isEmpty():
-            return self.operand_stack.pop()
+            if not self.operand_stack.isEmpty():
+                return self.operand_stack.pop()
+
+    def get_mean(self, **kwargs):
+        print
 
     def get_integer_operand(self, token):
-
-        if isinstance(token, int):
-            return token
-        elif token.name == 'integer':
+        if token.name == 'integer':
             return int(token.lexeme)
         else:
-            operand = self.get_symbol_value(token)
+            operand = self.get_token_value(token)
             if operand:
                 if self.get_symbol_type(token) == 'integer':
                     return int(operand)
@@ -487,17 +483,17 @@ class PostfixEvaluator(object):
         if symbol is not None:
             return symbol['type']
 
-    def get_symbol_value(self, token):
+    def get_token_value(self, token):
+        if (isinstance(token, Token) and (token.name is not 'identifier')):
+            return token.lexeme
+        else:
+            symbol = self.find_symbol(token)
 
-        if isinstance(token, int) or isinstance(token, basestring):
-            return token
-        symbol = self.find_symbol(token)
-
-        if symbol is not None:
-            if symbol['value']:
-                return symbol['value']
-            else:
-                self.error_msg = 'Uninitialized symbol: %s' % (symbol.lexeme)
+            if symbol is not None:
+                if symbol['value']:
+                    return symbol['value']
+                else:
+                    self.error_msg = 'Uninitialized symbol: %s' % (symbol.lexeme)
 
     def find_symbol(self, token):
         symbol = self.symbol_table.lookup(token.lexeme)
@@ -508,6 +504,7 @@ class PostfixEvaluator(object):
             self.error_msg = 'Cannot find symbol: "%s"!' % (token.lexeme)
             return None
 
+    # op2 = varname , op1 = value
     def perform_assignment(self, op1, op2):
         """
         Arguments:
@@ -634,7 +631,7 @@ if __name__ == '__main__':
                     # this is temporary
                     for item in parse_list:
                         print item.lexeme,
-                    print 
+                    print
 
                     # evaluation
                     postfix_evaluator = PostfixEvaluator(symbol_table, parse_list)
