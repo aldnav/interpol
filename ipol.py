@@ -29,7 +29,7 @@ class Token(object):
         self.group = group
 
     def __repr__(self):
-        return '<%s> %s %s' % (self.lexeme, self.name, self.group)
+        return '<%s> %s' % (self.lexeme, self.name)
 
 
 class SymbolTable(object):
