@@ -64,6 +64,10 @@ class SymbolTable(object):
     def set_value(self, key, value):
         """Sets the value of the symbol meta."""
         if self.lookup(key) is not None:
+            try:
+                value = int(value)
+            except Exception as e:
+                pass
             self.lookup(key)['value'] = value
             return value
         return None
