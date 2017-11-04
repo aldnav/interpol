@@ -524,15 +524,15 @@ class PostfixEvaluator(object):
             raise e
         result = 0
         if operator == 'PLUS':
-            result int(op1 + op2)
+            result = op1 + op2
         elif operator == 'MINUS':
-            result int(op1 - op2)
+            result = op1 - op2
         elif operator == 'TIMES':
-            result int(op1 * op2)
+            result = op1 * op2
         elif operator == 'DIVBY':
-            result int(op1 / op2)
+            result = op1 / op2
         elif operator == 'RAISE':
-            result int(op1 ** op2)
+            result = op1 ** op2
         elif operator == 'ROOT':
             result = (op1 ** (1 / op2))
         return Token('integer', result, '<INTEGER>')
