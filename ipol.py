@@ -136,9 +136,11 @@ def tokenize(line):
     for i, token in enumerate(token_results):
         if token.name == 'string_start' and string_start_index is None:
             string_start_index = i
-        elif (token.name == 'string_end' and
-              string_start_index is not None and
-              string_end_index is None):
+            if token.lexeme.endswith(']'):
+                string_end_index = i
+        if (token.name == 'string_end' and
+                string_start_index is not None and
+                string_end_index is None):
             string_end_index = i
     if string_start_index is not None and string_end_index is not None:
         string_lexeme = ' '.join([
