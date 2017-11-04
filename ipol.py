@@ -435,8 +435,8 @@ class PostfixEvaluator(object):
                 operand2 = self.operand_stack.pop()
                 self.perform_assignment(operand1, operand2)
 
-        if not operand_stack.isEmpty():
-            return operand_stack.pop()
+        if not self.operand_stack.isEmpty():
+            return self.operand_stack.pop()
 
     def perform_assignment(self, op1, op2):
         symbol = self.symbol_table.lookup(op2.lexeme)
@@ -550,9 +550,9 @@ if __name__ == '__main__':
                         print item.lexeme,
                     print ''
 
-                    # evaluation
+                    #evaluation
                     postfix_evaluator = PostfixEvaluator(symbol_table, parse_list)
-                    postfix_evaluator.evaluate(parse_list)
+                    postfix_evaluator.evaluate()
                     parse_list = []
                 else:
                     index = 0
