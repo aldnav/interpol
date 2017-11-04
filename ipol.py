@@ -149,10 +149,11 @@ def tokenize(line):
             + token_results[string_end_index + 1:]
     elif string_start_index is not None and string_end_index is None:
         # @NOTE: Improve this
-        raise Exception(
-            'While scanning String literal starting from "%s".\n'
-            'Must be an unclosed string.'
-            % token_results[string_start_index].lexeme)
+        raise Exception({
+            'error': 'LexingError',
+            'message': 'While scanning String literal starting from "%s".\n'
+                       'Must be an unclosed string.'
+                        % token_results[string_start_index].lexeme})
 
     tokens = token_results
     add_to_symbol_table(tokens)  # initial pass on adding symbols to table
@@ -172,7 +173,9 @@ def detect_token(text):
     elif re.fullmatch('[a-zA-Z_][a-zA-Z0-9_\'\"]*', text):
         return Token('identifier', text, '<IDENTIFIER>')
     else:
-        raise Exception('Invalid token!')
+        raise Exception({
+            'error': 'LexingError',
+            'message': 'Invalid token! %s' % text})
 
 
 def add_to_symbol_table(tokens):
@@ -678,7 +681,17 @@ if __name__ == '__main__':
             continue
         print i + 1,
         if line:  # skip empty lines
-            tokens = tokenize(line)
+            tokens = []
+            try:
+                tokens = tokenize(line)
+            except Exception as e:
+                if e.message['error'] == 'LexingError':
+                    print
+                    print '%s: %s\n%s: %s' % (
+                        e.message['error'], e.message['message'],
+                        filename, i + 1)
+                    print '  ->', line
+                    break
             print tokens
             # conditions for trapping codes outside begin and rupture
 
