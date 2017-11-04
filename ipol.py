@@ -501,11 +501,7 @@ class PostfixEvaluator(object):
         return Token('integer', dist, '<INTEGER>')
 
     def get_mean(self, operands):
-        result = 0
-        for operand in operands:
-            result = result + operand
-
-        result = result / (len(operands))
+        result = sum(operands) / (len(operands))
         return Token('integer', result, '<INTEGER>')
 
     def get_integer_operand(self, token):
