@@ -414,17 +414,39 @@ class ParseTree(object):
 
 class PostfixEvaluator(object):
 
-    def evaluate(self, symbol_table, parse_list):
-        operandStack = Stack()
+    def __init__(self, symbol_table, parse_list):
+        self.symbol_table = symbol_table
+        self.parse_list = parse_list
+        self.error_msg = ''
+        self.operand_stack = Stack()
 
-        for token in parse_list:
-            if token.group in ['<OPERATOR>']:
-                operand1 = operand_stack.pop()
-                operand2 = operand_stack.pop()
-                result = self.do_basic_arithmetic(operand1, operand2, token.lexeme)
-                operand_stack.push(result)
+    def evaluate(self):
 
-        return operand_stack.pop()
+        for token in self.parse_list:
+            if token.group in ['<IDENTIFIER>', '<STRING>', '<INTEGER>']:
+                self.operand_stack.push(token)
+            elif token.group == '<OPERATOR>':
+                operand1 = self.operand_stack.pop()
+                operand2 = self.operand_stack.pop()
+                result = self.do_basic_arithmetic(operand1.lexeme, operand2.lexeme, token.lexeme)
+                self.operand_stack.push(result)
+            elif token.group in ['STORE']:
+                operand1 = self.operand_stack.pop()
+                operand2 = self.operand_stack.pop()
+                self.perform_assignment(operand1, operand2)
+
+        if not operand_stack.isEmpty():
+            return operand_stack.pop()
+
+    def perform_assignment(self, op1, op2):
+        symbol = self.symbol_table.lookup(op2.lexeme)
+        if symbol is not None:
+            if symbol.data_type == op1.name:
+                symbol_table.set_value(op2.lexeme, op1.lexeme)
+            else:
+                self.error_msg = 'Type Error! %s and %s do not have the same datatype.' % (op1.lexeme, op2.lexeme)
+        else:
+            self.error_msg = 'Cannot find symbol: %s!' % (op2.lexeme)
 
     def do_basic_arithmetic(self, op1, op2, operator):
         if operator == 'PLUS':
@@ -462,7 +484,7 @@ class Stack(object):
 
 
 def visit(node):
-    parse_list.append(node)
+    parse_list.append(node.token)
 
 
 def walk_tree_df_postorder(node, visit):
@@ -523,10 +545,14 @@ if __name__ == '__main__':
                 end_state = syntax_checker.end_state
                 if end_state in accepting_states:
                     walk_tree_df_postorder(syntax_checker.parse_tree.root, visit)
+                    # this is temporary
                     for item in parse_list:
-                        print item.token.lexeme,
+                        print item.lexeme,
                     print ''
 
+                    # evaluation
+                    postfix_evaluator = PostfixEvaluator(symbol_table, parse_list)
+                    postfix_evaluator.evaluate(parse_list)
                     parse_list = []
                 else:
                     index = 0
