@@ -58,7 +58,7 @@ class SymbolTable(object):
             'NAME\t\t| TYPE \t\t | VALUE\n'
         )
         for k, v in self._table.items():
-            display += '%s\t\t| %s \t | %r\n' % (k, v['type'], v.get('value', None))
+            display += '%s\t\t| %s  \t | %r\n' % (k, v['type'], v.get('value', None))
         return display.expandtabs(10)
 
     def set_value(self, key, value):
@@ -502,6 +502,11 @@ class PostfixEvaluator(object):
 
     # op2 = varname , op1 = value
     def perform_assignment(self, op1, op2):
+        """
+        Arguments:
+            op1 -- value
+            op2 -- varname
+        """
         symbol = self.find_symbol(op2)
 
         if symbol is not None:
@@ -595,6 +600,8 @@ if __name__ == '__main__':
     has_error = False
 
     for i, line in enumerate(lines):
+        if line.strip().startswith('#'):
+            continue
         print i + 1,
         if line:  # skip empty lines
             tokens = tokenize(line)
