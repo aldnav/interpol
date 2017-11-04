@@ -427,7 +427,8 @@ class PostfixEvaluator(object):
 
     def evaluate(self):
 
-        for token in self.parse_list:
+        for node in self.parse_list:
+            token = node.token
             if self.error_msg:
                 return None
             else:
@@ -460,12 +461,26 @@ class PostfixEvaluator(object):
                     print self.get_token_value(self.operand_stack.pop()),
                 elif token.lexeme == 'GIVEYOU!!':
                     print self.get_token_value(self.operand_stack.pop())
+                elif token.lexeme == 'MEAN':
+                    items = []
+                    index = 0
+                    operand_size = len(node.children)
+                    while index < operand_size:
+                        operand = self.get_integer_operand(self.operand_stack.pop())
+                        items.append(operand)
+                        index = index + 1
+                    self.operand_stack.push(self.get_mean(items))
 
-            if not self.operand_stack.isEmpty():
-                return self.operand_stack.pop()
+        if not self.operand_stack.isEmpty():
+            return self.operand_stack.pop()
 
-    def get_mean(self, **kwargs):
-        print
+    def get_mean(self, operands):
+        result = 0
+        for operand in operands:
+            result = result + operand
+
+        result = result/(len(operands))
+        return Token('integer', result, '<INTEGER>')
 
     def get_integer_operand(self, token):
         if token.name == 'integer':
@@ -568,7 +583,7 @@ class Stack(object):
 
 
 def visit(node):
-    parse_list.append(node.token)
+    parse_list.append(node)
 
 
 def walk_tree_df_postorder(node, visit):
@@ -633,7 +648,7 @@ if __name__ == '__main__':
                     walk_tree_df_postorder(syntax_checker.parse_tree.root, visit)
                     # this is temporary
                     for item in parse_list:
-                        print item.lexeme,
+                        print item.token.lexeme,
                     print
 
                     # evaluation
