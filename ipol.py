@@ -470,9 +470,32 @@ class PostfixEvaluator(object):
                         items.append(operand)
                         index = index + 1
                     self.operand_stack.push(self.get_mean(items))
+                elif token.lexeme == 'DIST':
+                    temp_operand4 = self.operand_stack.pop()
+                    operand4 = self.get_integer_operand(temp_operand4)
+                    if operand4 is not None:
+                        temp_operand3 = self.operand_stack.pop()
+                        operand3 = self.get_integer_operand(temp_operand3)
+                        if operand3 is not None:
+                            temp_operand2 = self.operand_stack.pop()
+                            operand2 = self.get_integer_operand(temp_operand2)
+                            if operand2 is not None:
+                                temp_operand1 = self.operand_stack.pop()
+                                operand1 = self.get_integer_operand(temp_operand1)
+                                if operand1 is not None:
+                                    result = self.get_distance(operand1, operand2, operand3, operand4)
+                                    self.operand_stack.push(result)
 
         if not self.operand_stack.isEmpty():
             return self.operand_stack.pop()
+
+    def get_distance(self, op1, op2, op3, op4):
+        result = 0
+
+        # temporary
+        result = 10
+        return Token('integer', result, '<INTEGER>')
+
 
     def get_mean(self, operands):
         result = 0
