@@ -706,8 +706,12 @@ if __name__ == '__main__':
         print 'File not supported. INTERPOL file has the extension `.ipol`'
         sys.exit(1)
     file_content = None
-    with open(filename, 'r') as f:
-        lines = f.readlines()
+    try:
+        with open(filename, 'r') as f:
+            lines = f.readlines()
+    except IOError as e:
+        print e
+        sys.exit(1)
 
     code_began = False
     code_ended = False
