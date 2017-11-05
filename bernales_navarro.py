@@ -211,9 +211,9 @@ def add_to_symbol_table(tokens):
 
 
 interpol_dfa = {
-    1: {'<IDENTIFIER>': 7, '<DATATYPE>': 2, 'END': 3, 'BEGIN': 3, '<IO_FUNCTION>': 8, 'STORE': 10},
+    1: {'<IDENTIFIER>': 7, '<DATATYPE>': 2, 'END': 3, 'BEGIN': 3, '<IO_FUNCTION>': 8, 'STORE': 10, '<EXP>': 14},
     2: {'<IDENTIFIER>': 4},
-    3: {},  # dead end state
+    3: {},
     4: {'<WITH>': 5},  # accepting state
     5: {'<EXP>': 6},
     6: {},  # accepting state
@@ -223,10 +223,11 @@ interpol_dfa = {
     10: {'<EXP>': 11},
     11: {'IN': 12},
     12: {'<IDENTIFIER>': 9},
-    13: {'<EXP>': None},
+    13: {'<EXP>': None}, # dead end state
+    14: {'<END_OF_LINE>': None}
 }
 
-accepting_states = [4, 6, 9]
+accepting_states = [4, 6, 9, 14]
 
 
 class SyntaxChecker(object):
@@ -261,23 +262,24 @@ class SyntaxChecker(object):
                     if (token.group in [
                             '<IDENTIFIER>', '<OPERATOR>', '<STRING>', '<INTEGER>',
                             '<DIST>', '<MEAN>'] and
-                            state in [5, 10, 7, 8]):
+                            state in [1, 5, 10, 7, 8]):
                         if self.accept_exp():
                             state = transitions[state].get('<EXP>', None)
                         else:
-                            if not self.error_msg:
-                                self.error_msg = 'Invalid expression.'
+                            self.error_msg = 'Invalid expression.'
                             state = 13  # set to dead end state
                             break   # send to dead end
                     else:
                         if state in [5, 10, 7, 8]:
                             self.error_msg = 'Expected expression.'
                             state = 13  # set to dead end state
+                        elif state in [14, 6, 9]:
+                            self.error_msg = 'Expected end of line.'
+                            state = 13
+                        elif state == 4:
+                            self.error_msg = 'Expected WITH keyword.'
+                            state = 13
 
-                        else:
-                            if state == 4:
-                                self.error_msg = 'Expected WITH keyword.'
-                                state = 13
                         break
                 else:
                     if token.group == '<IO_FUNCTION>':
@@ -316,6 +318,8 @@ class SyntaxChecker(object):
                         token.group == '<STRING>'):
                     self.error_msg = 'Type Error! String cannot be an operand.'
                     return False
+            if self.parse_tree.current is None:
+                return False
             if (len(self.parse_tree.current.children) ==
                     self.parse_tree.current.max_children):
                 self.parse_tree.current = self.parse_tree.current.parent
@@ -408,9 +412,10 @@ class SyntaxChecker(object):
         return is_accepted
 
     def print_error_msg(self):
+        print "Expected",
         for token in interpol_dfa[self.end_state].keys():
             if token == interpol_dfa[end_state].keys()[-1]:
-                print "%s " % token
+                print " %s" % token
             else:
                 print "%s, " % token,
 
@@ -533,7 +538,7 @@ class PostfixEvaluator(object):
             if symbol is not None:
                 if symbol['value']:
                     if symbol['type'] == 'string':
-                        return symbol['value'].replace('[','').replace(']','')
+                        return symbol['value'].replace('[', '').replace(']', '')
                     else:
                         return symbol['value']
                 else:
